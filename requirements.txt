@@ -1,0 +1,6 @@
+pip>=9.0.1
+tensorflow>=1.5.0
+keras>=2.1.3
+numpy>=1.14.0
+pickle
+flask>=0.12.2
