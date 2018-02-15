@@ -10,14 +10,14 @@ import numpy as np
 import flask
 
 HOME_DIR = expanduser('~')
-DATA_DIR = HOME_DIR + "/data/sentiment-prediction"
+DATA_DIR = HOME_DIR + "/.publia/data/sentiment-analysis"
 
 MODEL_URL = "https://drive.google.com/uc?export=download&id=1Wgx2K2aIB9oztqYWMkwREBDRtKrpAg-8"
-MODEL_NAME = 'fsde_model.h5'
+MODEL_NAME = 'model_de.h5'
 MODEL_FILE = DATA_DIR + "/" + MODEL_NAME
 
 TOKENIZER_URL = "https://drive.google.com/uc?export=download&id=13wYposDP3TqbiDM-Y72n9cllOvHVszQh"
-TOKENIZER_NAME = 'fsde_tokenizer.pickle'
+TOKENIZER_NAME = 'tokenizer_de.pickle'
 TOKENIZER_FILE = DATA_DIR + "/" + TOKENIZER_NAME
 
 MAX_TEXT_LENGTH = 400
@@ -27,7 +27,7 @@ app = flask.Flask(__name__)
 model = None
 tokenizer = None
 
-def load_model_from_drive():
+def load_model_from_google_drive():
     """ Load saved model. """
     global model
 
@@ -57,7 +57,7 @@ def load_model_from_drive():
     print('Loading model {0}'.format(MODEL_FILE))
     model = load_model(MODEL_FILE)
 
-def load_tokenizer_from_drive():
+def load_tokenizer_from_google_drive():
     """ Load saved tokenizer. """
     global tokenizer
 
@@ -143,8 +143,8 @@ def main(argv):
                 port = int(arg)
 
         print("Staring server...")
-        load_model_from_drive()
-        load_tokenizer_from_drive()
+        load_model_from_google_drive()
+        load_tokenizer_from_google_drive()
         app.run(host, port)
 
     except getopt.GetoptError:
