@@ -10,7 +10,7 @@ import numpy as np
 import flask
 
 HOME_DIR = expanduser('~')
-DATA_DIR = HOME_DIR + "/.publia/data/sentiment-analysis"
+DATA_DIR = HOME_DIR + "/.ipublia/data/sentiment-analysis"
 
 MODEL_URL = "https://drive.google.com/uc?export=download&id=1Wgx2K2aIB9oztqYWMkwREBDRtKrpAg-8"
 MODEL_NAME = 'model_de.h5'
