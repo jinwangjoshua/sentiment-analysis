@@ -64,11 +64,13 @@ The answer will look something like this:
 {
     "predictions": [
     {
-        "probability": 0.988837718963623,
+        "prediction": 0.988837718963623,
+        "sentiment": "positiv",
         "text": "Dieser Film ist vom Anfang bis am Ende spannend! Die Schauspieler sind super!"
     },
     {
-        "probability": 0.005242485553026199,
+        "prediction": 0.005242485553026199,
+        "sentiment": "negativ",
         "text": "Dieser Film ist vom Anfang bis am Ende langweilig! Die Schauspieler sind mässig bis schlecht!"
     }
   ],

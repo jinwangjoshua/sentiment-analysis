@@ -13,6 +13,7 @@ HOME_DIR = os.path.expanduser('~')
 DATA_DIR = os.path.join(HOME_DIR, '.ipublia', 'data', 'sentiment-analysis')
 REMOTE_DATA_URL = 'https://www.ipublia.com/data/sentiment-analysis'
 MAX_TEXT_LENGTH = 400
+SENTIMENTS = { 'negativ': 1/3, 'neutral': 2/3 }
 
 # Initialize our Flask application and the Keras model
 app = flask.Flask(__name__)
@@ -69,6 +70,12 @@ def prepare_texts(texts):
     padded_texts = pad_sequences(sequences, maxlen=MAX_TEXT_LENGTH)
     return np.array(padded_texts)
 
+def probability_to_string(probability):
+    if probability < 1/2:
+        return 'negativ'
+    else:
+        return 'positiv'
+
 @app.route('/predict', methods=['POST'])
 def predict():
     data = { 'success': False }
@@ -89,7 +96,8 @@ def predict():
             # Loop over the results and add them to the list of
             # returned predictions
             for i in range(len(results)):
-                r = { 'text': texts[i], 'probability': float(results[i][0]) }
+                p = float(results[i][0])
+                r = { 'sentiment': probability_to_string(p), 'text': texts[i], 'prediction': p }
                 data['predictions'].append(r)
 
             # Indicate that the request was a success
