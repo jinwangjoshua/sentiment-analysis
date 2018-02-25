@@ -1,6 +1,9 @@
 # Data directory
 ./data
 
+# OSX Filesystem
+.DS_Store
+
 # vs code
 .vscode
 
