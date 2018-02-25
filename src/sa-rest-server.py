@@ -30,21 +30,21 @@ model = None
 tokenizer = None
 
 def load_remote(source_url, target_file):
-    print('Downloading {0} to {1}'.format(source_url, target_file))
-    
     if not isdir(DATA_DIR):
         print('Creating data directory: ' + DATA_DIR)
         makedirs(DATA_DIR)
 
-    r = requests.get(source_url, timeout=10)
-    if r.status_code == 200:
-        data = r.content
-        with open(target_file, 'wb') as f:                
-            f.write(data)
-        return 1
-    else:
-        print('Error ({0}) loading from {1}'.format(r.status_code, source_url))
-        return -1
+    if not isfile(target_file):
+        print('Downloading {0} to {1}'.format(source_url, target_file))
+        r = requests.get(source_url, timeout=10)
+        if r.status_code == 200:
+            data = r.content
+            with open(target_file, 'wb') as f:                
+                f.write(data)
+            return 1
+        else:
+            print('Error ({0}) loading from {1}'.format(r.status_code, source_url))
+            return -1
     return 0
 
 def load_model_and_tokenizer():
