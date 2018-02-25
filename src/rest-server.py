@@ -1,5 +1,5 @@
-from os import makedirs, listdir
-from os.path import expanduser, isdir, isfile, join
+import os
+import os.path
 import sys, getopt
 import re
 import requests
@@ -9,19 +9,9 @@ from keras.models import load_model
 import numpy as np
 import flask
 
-HOME_DIR = expanduser('~')
-DATA_DIR = HOME_DIR + '/.ipublia/data/sentiment-analysis/'
-
-REMOTE_DATA_URL = 'https://www.ipublia.com/data/'
-
-MODEL_NAME = 'sa_model_de_v1.0.0.h5'
-MODEL_URL = REMOTE_DATA_URL + MODEL_NAME
-MODEL_FILE = DATA_DIR + MODEL_NAME
-
-TOKENIZER_NAME = 'sa_tokenizer_de_v1.0.0.pickle'
-TOKENIZER_URL = REMOTE_DATA_URL + TOKENIZER_NAME
-TOKENIZER_FILE = DATA_DIR + TOKENIZER_NAME
-
+HOME_DIR = os.path.expanduser('~')
+DATA_DIR = os.path.join(HOME_DIR, '.ipublia', 'data', 'sentiment-analysis')
+REMOTE_DATA_URL = 'https://www.ipublia.com/data/sentiment-analysis'
 MAX_TEXT_LENGTH = 400
 
 # Initialize our Flask application and the Keras model
@@ -30,11 +20,11 @@ model = None
 tokenizer = None
 
 def load_remote(source_url, target_file):
-    if not isdir(DATA_DIR):
+    if not os.path.isdir(DATA_DIR):
         print('Creating data directory: ' + DATA_DIR)
-        makedirs(DATA_DIR)
+        os.makedirs(DATA_DIR)
 
-    if not isfile(target_file):
+    if not os.path.isfile(target_file):
         print('Downloading {0} to {1}'.format(source_url, target_file))
         r = requests.get(source_url, timeout=10)
         if r.status_code == 200:
@@ -47,17 +37,25 @@ def load_remote(source_url, target_file):
             return -1
     return 0
 
-def load_model_and_tokenizer():
+def load_model_and_tokenizer(model_id):
     global model
     global tokenizer
 
-    load_remote(MODEL_URL, MODEL_FILE)
-    print('Loading model {0}'.format(MODEL_FILE))
-    model = load_model(MODEL_FILE)
+    model_name = 'model_' + model_id + '.h5'
+    model_file = os.path.join(DATA_DIR, model_name)
+    model_url = REMOTE_DATA_URL + '/' + model_name
 
-    load_remote(TOKENIZER_URL, TOKENIZER_FILE)
-    print('Loading tokenizer {0}'.format(TOKENIZER_FILE))
-    with open(TOKENIZER_FILE, 'rb') as handle:
+    load_remote(model_url, model_file)
+    print('Loading model {0}'.format(model_file))
+    model = load_model(model_file)
+
+    tokenizer_name = 'tokenizer_' + model_id + '.pickle'
+    tokenizer_file = os.path.join(DATA_DIR, tokenizer_name)
+    tokenizer_url = REMOTE_DATA_URL + '/' + tokenizer_name
+
+    load_remote(tokenizer_url, tokenizer_file)
+    print('Loading tokenizer {0}'.format(tokenizer_file))
+    with open(tokenizer_file, 'rb') as handle:
         tokenizer = pickle.load(handle)
 
 def prepare_texts(texts):
@@ -71,14 +69,14 @@ def prepare_texts(texts):
     padded_texts = pad_sequences(sequences, maxlen=MAX_TEXT_LENGTH)
     return np.array(padded_texts)
 
-@app.route("/predict", methods=["POST"])
+@app.route('/predict', methods=['POST'])
 def predict():
-    data = { "success": False }
+    data = { 'success': False }
 
-    if flask.request.method == "POST":
-        if flask.request.json["texts"]:
+    if flask.request.method == 'POST':
+        if flask.request.json['texts']:
             # Pead the texts
-            texts = flask.request.json["texts"]
+            texts = flask.request.json['texts']
 
             # Preprocess the texts and prepare them for classification
             prepared_texts = prepare_texts(texts)
@@ -91,8 +89,8 @@ def predict():
             # Loop over the results and add them to the list of
             # returned predictions
             for i in range(len(results)):
-                r = { "text": texts[i], "probability": float(results[i][0]) }
-                data["predictions"].append(r)
+                r = { 'text': texts[i], 'probability': float(results[i][0]) }
+                data['predictions'].append(r)
 
             # Indicate that the request was a success
             data["success"] = True
@@ -103,30 +101,33 @@ def predict():
 def main(argv):
     host = None
     port = None
+    model_id = 'de_1.0.0'
 
     try:
-        opts, args = getopt.getopt(argv, "hp:", ["host=", "port="])
+        opts, args = getopt.getopt(argv, 'hp:', ['model=', 'host=', 'port='])
         for opt, arg in opts:
-            if opt == "-h":
-                print('Usage: sa-rest-server.py --host=<host> --port=<port>')
+            if opt in ('-h'):
+                print('Usage: rest-server.py --model=<model> --host=<host> --port=<port>')
                 sys.exit()
-            elif opt in ("--host"):
+            elif opt in ('-m', '--model'):
+                model_id = arg
+            elif opt in ('--host'):
                 host = arg
-            elif opt in ("-p", "--port"):
+            elif opt in ('-p', '--port'):
                 port = int(arg)
-
-        load_model_and_tokenizer()
-        print("Staring server...")
+        
+        load_model_and_tokenizer(model_id)
+        print('Staring server...')
         app.run(host, port)
 
     except getopt.GetoptError:
-        print('Usage: sa-rest-server.py --host=<host> --port=<port>')
+        print('Usage: rest-server.py --model=<model> --host=<host> --port=<port>')
         sys.exit(2)
     
 
 # If this is the main thread of execution first load the model and tokenizer and
 # then start the server
 # To kill the server if port is still in use after Ctrl+C: ps aux | grep rest_server
-if __name__ == "__main__":
+if __name__ == '__main__':
     main(sys.argv[1:])
     

@@ -23,16 +23,18 @@ pip3 install -r ./requirements.txt
 To start the REST server in a terminal:
 
 ```bash
-sa-rest-server.py -h
-Usage: sa-rest-server.py --host=<host> --port=<port>
+rest-server.py -h
+Usage: rest-server.py --model=<model> --host=<host> --port=<port>
 ```
+
+model: id composed of the language and the version (examples: de_1.0.0, en_1.0.0) of the model to load.
 
 _Note_: The first time you start the service, the model (including the trained weights) and the tokenizer are loaded from ipublia's website (using https). They are stored in the directory ~/.ipublia/data/sentiment-analysis.
 
 ### Example
 
 ```bash
-python3 ./src/sa-rest-server.py --host=127.0.0.1 --port=5000
+python3 ./src/rest-server.py --model=de_1.0.0 --host=127.0.0.1 --port=5000
 ```
 
 ## Querying the REST Service
