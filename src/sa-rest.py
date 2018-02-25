@@ -106,8 +106,8 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv, 'hp:', ['model=', 'host=', 'port='])
         for opt, arg in opts:
-            if opt in ('-h'):
-                print('Usage: rest-server.py --model=<model> --host=<host> --port=<port>')
+            if opt == '-h':
+                print('Usage: sa-rest.py --model=<model> --host=<host> --port=<port>')
                 sys.exit()
             elif opt in ('-m', '--model'):
                 model_id = arg
@@ -121,13 +121,13 @@ def main(argv):
         app.run(host, port)
 
     except getopt.GetoptError:
-        print('Usage: rest-server.py --model=<model> --host=<host> --port=<port>')
+        print('Usage: sa-rest.py --model=<model> --host=<host> --port=<port>')
         sys.exit(2)
     
 
 # If this is the main thread of execution first load the model and tokenizer and
 # then start the server
-# To kill the server if port is still in use after Ctrl+C: ps aux | grep rest_server
+# To kill the server if port is still in use after Ctrl+C: ps aux | grep sa-rest
 if __name__ == '__main__':
     main(sys.argv[1:])
     

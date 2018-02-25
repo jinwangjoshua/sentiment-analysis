@@ -23,8 +23,8 @@ pip3 install -r ./requirements.txt
 To start the REST server in a terminal:
 
 ```bash
-rest-server.py -h
-Usage: rest-server.py --model=<model> --host=<host> --port=<port>
+sa-rest.py -h
+Usage: sa-rest.py --model=<model> --host=<host> --port=<port>
 ```
 
 model: id composed of the language and the version (examples: de_1.0.0, en_1.0.0) of the model to load.
@@ -34,7 +34,7 @@ _Note_: The first time you start the service, the model (including the trained w
 ### Example
 
 ```bash
-python3 ./src/rest-server.py --model=de_1.0.0 --host=127.0.0.1 --port=5000
+python3 ./src/sa-rest.py --model=de_1.0.0 --host=127.0.0.1 --port=5000
 ```
 
 ## Querying the REST Service
