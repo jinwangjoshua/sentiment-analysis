@@ -2,7 +2,7 @@
 
 Sentiment analysis of german texts. The machine learning model predicts whether the sentiment of a text is positive or negative.
 
-The machine learning model was implemented with [Keras](https://keras.io) and trained for about 7 hours with about 30'000 German film reviews. The measured accuracy of the predictions is 81.82%. The model consists of an embedding layer as input, a hidden layer with 400 LSTM units and an output layer with 1 unit. The maximum length of an input text is 400 words. For the word embedding the [pre-trained word vectors](https://github.com/facebookresearch/fastText/blob/master/pretrained-vectors.md) of *FacebookResearch* were used.
+The machine learning model was implemented with [Keras](https://keras.io) and trained with about 30'000 German film reviews. The measured accuracy of the predictions is 81.82%. The model consists of an embedding layer as input, a hidden layer with 400 LSTM units and an output layer with 1 unit. The maximum length of an input text is 400 words. For the word embedding the [pre-trained word vectors](https://github.com/facebookresearch/fastText/blob/master/pretrained-vectors.md) of *FacebookResearch* were used.
 
 Several texts can be posted to the REST service at once for analysis (see the examples below).
 
@@ -23,16 +23,16 @@ pip3 install -r ./requirements.txt
 To start the REST server in a terminal:
 
 ```bash
-rest-server.py -h
-Usage: rest-server.py --host=<host> --port=<port>
+sa-rest-server.py -h
+Usage: sa-rest-server.py --host=<host> --port=<port>
 ```
 
-_Note_: The first time you start the service, the model (including the trained weights) and the tokenizer are loaded from Google Drive. They are stored in the directory ~/.ipublia/data/sentiment-analysis.
+_Note_: The first time you start the service, the model (including the trained weights) and the tokenizer are loaded from ipublia's website (using https). They are stored in the directory ~/.ipublia/data/sentiment-analysis.
 
 ### Example
 
 ```bash
-python3 ./src/rest-server.py --host=127.0.0.1 --port=5000
+python3 ./src/sa-rest-server.py --host=127.0.0.1 --port=5000
 ```
 
 ## Querying the REST Service

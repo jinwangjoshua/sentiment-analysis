@@ -10,15 +10,17 @@ import numpy as np
 import flask
 
 HOME_DIR = expanduser('~')
-DATA_DIR = HOME_DIR + "/.ipublia/data/sentiment-analysis"
+DATA_DIR = HOME_DIR + '/.ipublia/data/sentiment-analysis/'
 
-MODEL_URL = "https://drive.google.com/uc?export=download&id=1Wgx2K2aIB9oztqYWMkwREBDRtKrpAg-8"
-MODEL_NAME = 'model_de.h5'
-MODEL_FILE = DATA_DIR + "/" + MODEL_NAME
+REMOTE_DATA_URL = 'https://www.ipublia.com/data/'
 
-TOKENIZER_URL = "https://drive.google.com/uc?export=download&id=13wYposDP3TqbiDM-Y72n9cllOvHVszQh"
-TOKENIZER_NAME = 'tokenizer_de.pickle'
-TOKENIZER_FILE = DATA_DIR + "/" + TOKENIZER_NAME
+MODEL_NAME = 'sa_model_de_v1.0.0.h5'
+MODEL_URL = REMOTE_DATA_URL + MODEL_NAME
+MODEL_FILE = DATA_DIR + MODEL_NAME
+
+TOKENIZER_NAME = 'sa_tokenizer_de_v1.0.0.pickle'
+TOKENIZER_URL = REMOTE_DATA_URL + TOKENIZER_NAME
+TOKENIZER_FILE = DATA_DIR + TOKENIZER_NAME
 
 MAX_TEXT_LENGTH = 400
 
@@ -27,62 +29,33 @@ app = flask.Flask(__name__)
 model = None
 tokenizer = None
 
-def load_model_from_google_drive():
-    """ Load saved model. """
-    global model
-
-    # Create data and model dir
+def load_remote(source_url, target_file):
+    print('Downloading {0} to {1}'.format(source_url, target_file))
+    
     if not isdir(DATA_DIR):
         print('Creating data directory: ' + DATA_DIR)
         makedirs(DATA_DIR)
 
-    if not isfile(MODEL_FILE):
-        print('Downloading model {0} from {1}'.format(MODEL_NAME, MODEL_URL))
-     
-        r = requests.get(MODEL_URL, timeout=10)
-        if r.status_code == 200:
-            data = r.content
-            if r.cookies:
-                confirm = re.search(r'confirm=(.{4})', data.decode('utf-8'))
-                if confirm:
-                    confirmed_url = MODEL_URL + '&confirm=' + confirm.group(1)
-                    r2 = requests.get(confirmed_url, cookies=r.cookies)
-                    data = r2.content
+    r = requests.get(source_url, timeout=10)
+    if r.status_code == 200:
+        data = r.content
+        with open(target_file, 'wb') as f:                
+            f.write(data)
+        return 1
+    else:
+        print('Error ({0}) loading from {1}'.format(r.status_code, source_url))
+        return -1
+    return 0
 
-            with open(MODEL_FILE, 'wb') as f:                
-                f.write(data)
-        else:
-            print('Error ({0}) loading model from {1}'.format(r.status_code, MODEL_URL))
+def load_model_and_tokenizer():
+    global model
+    global tokenizer
 
+    load_remote(MODEL_URL, MODEL_FILE)
     print('Loading model {0}'.format(MODEL_FILE))
     model = load_model(MODEL_FILE)
 
-def load_tokenizer_from_google_drive():
-    """ Load saved tokenizer. """
-    global tokenizer
-
-    # Create data and model dir
-    if not isdir(DATA_DIR):
-        print('Creating data directory: ' + DATA_DIR)
-        makedirs(DATA_DIR)
-
-    if not isfile(TOKENIZER_FILE):
-        print('Downloading tokenizer {0} from {1}'.format(TOKENIZER_NAME, TOKENIZER_URL))
-        r = requests.get(TOKENIZER_URL, timeout=10)
-        if r.status_code == 200:
-            data = r.content
-            if r.cookies:
-                confirm = re.search(r'confirm=(.{4})', data.decode('utf-8'))
-                if confirm:
-                    confirmed_url = TOKENIZER_URL + '&confirm=' + confirm.group(1)
-                    r2 = requests.get(confirmed_url, cookies=r.cookies)
-                    data = r2.content
-
-            with open(TOKENIZER_FILE, 'wb') as f:                
-                f.write(data)
-        else:
-            print('Error ({0}) loading tokenizer from {1}'.format(r.status_code, TOKENIZER_URL))
-
+    load_remote(TOKENIZER_URL, TOKENIZER_FILE)
     print('Loading tokenizer {0}'.format(TOKENIZER_FILE))
     with open(TOKENIZER_FILE, 'rb') as handle:
         tokenizer = pickle.load(handle)
@@ -135,20 +108,19 @@ def main(argv):
         opts, args = getopt.getopt(argv, "hp:", ["host=", "port="])
         for opt, arg in opts:
             if opt == "-h":
-                print('Usage: rest-server.py --host=<host> --port=<port>')
+                print('Usage: sa-rest-server.py --host=<host> --port=<port>')
                 sys.exit()
             elif opt in ("--host"):
                 host = arg
             elif opt in ("-p", "--port"):
                 port = int(arg)
 
+        load_model_and_tokenizer()
         print("Staring server...")
-        load_model_from_google_drive()
-        load_tokenizer_from_google_drive()
         app.run(host, port)
 
     except getopt.GetoptError:
-        print('Usage: rest-server.py --host=<host> --port=<port>')
+        print('Usage: sa-rest-server.py --host=<host> --port=<port>')
         sys.exit(2)
     
 
