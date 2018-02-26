@@ -1,9 +1,11 @@
 import os
 import os.path
 import sys, getopt
-import re
 import requests
+import json
 import pickle
+import itertools
+
 from keras.preprocessing.sequence import pad_sequences
 from keras.models import load_model
 import numpy as np
@@ -13,14 +15,13 @@ HOME_DIR = os.path.expanduser('~')
 DATA_DIR = os.path.join(HOME_DIR, '.ipublia', 'data', 'sentiment-analysis')
 REMOTE_DATA_URL = 'https://www.ipublia.com/data/sentiment-analysis'
 MAX_TEXT_LENGTH = 400
-SENTIMENTS = { 'negativ': 1/3, 'neutral': 2/3 }
 
 # Initialize our Flask application and the Keras model
 app = flask.Flask(__name__)
-model = None
-tokenizer = None
+models = {}
+tokenizers = {}
 
-def load_remote(source_url, target_file):
+def load_remote_file(source_url, target_file):
     if not os.path.isdir(DATA_DIR):
         print('Creating data directory: ' + DATA_DIR)
         os.makedirs(DATA_DIR)
@@ -38,28 +39,39 @@ def load_remote(source_url, target_file):
             return -1
     return 0
 
-def load_model_and_tokenizer(model_id):
-    global model
-    global tokenizer
+def register(model_ids, detect_lang):
+    global detect_lang_url
+    global lang_registry
 
-    model_name = 'model_' + model_id + '.h5'
-    model_file = os.path.join(DATA_DIR, model_name)
-    model_url = REMOTE_DATA_URL + '/' + model_name
+    detect_lang_url = detect_lang
+    lang_registry = {}
+    model_ids = [m.strip() for m in model_ids.split(',')]
 
-    load_remote(model_url, model_file)
-    print('Loading model {0}'.format(model_file))
-    model = load_model(model_file)
+    for model_id in model_ids:
+        lang = model_id.split('_')[0]
 
-    tokenizer_name = 'tokenizer_' + model_id + '.pickle'
-    tokenizer_file = os.path.join(DATA_DIR, tokenizer_name)
-    tokenizer_url = REMOTE_DATA_URL + '/' + tokenizer_name
+        model_name = 'model_' + model_id + '.h5'
+        model_file = os.path.join(DATA_DIR, model_name)
+        model_url = REMOTE_DATA_URL + '/' + model_name
 
-    load_remote(tokenizer_url, tokenizer_file)
-    print('Loading tokenizer {0}'.format(tokenizer_file))
-    with open(tokenizer_file, 'rb') as handle:
-        tokenizer = pickle.load(handle)
+        # Load an register model
+        load_remote_file(model_url, model_file)
+        print('Loading model {0}'.format(model_file))
+        model = load_model(model_file)
 
-def prepare_texts(texts):
+        # Load and register tokenizer
+        tokenizer_name = 'tokenizer_' + model_id + '.pickle'
+        tokenizer_file = os.path.join(DATA_DIR, tokenizer_name)
+        tokenizer_url = REMOTE_DATA_URL + '/' + tokenizer_name
+
+        load_remote_file(tokenizer_url, tokenizer_file)
+        print('Loading tokenizer {0}'.format(tokenizer_file))
+        with open(tokenizer_file, 'rb') as handle:
+            tokenizer = pickle.load(handle)
+
+        lang_registry[lang] = { 'model': model, 'tokenizer': tokenizer }
+
+def prepare_texts(tokenizer, texts):
     """
     Create the input sequences and do the padding of the vector.
 
@@ -82,54 +94,91 @@ def predict():
 
     if flask.request.method == 'POST':
         if flask.request.json['texts']:
-            # Pead the texts
             texts = flask.request.json['texts']
+            if detect_lang_url:
+                headers = {'content-type': 'application/json'}
+                response = requests.post(detect_lang_url, headers=headers, json=flask.request.json)
+                detected = response.json()
+                # Group texts by language
+                by_lang = {}
+                for lang_response in detected['predictions']:
+                    by_lang.setdefault(lang_response['lang']['label'], []).append(lang_response)
+                
+                for lang, values in by_lang.items():
+                    if lang in lang_registry:
+                        model = lang_registry[lang]['model']
+                        tokenizer = lang_registry[lang]['tokenizer']
+                        
+                        # Get the texts as array for prediction
+                        texts = [d['text'] for d in values]
+                        prepared_texts = prepare_texts(tokenizer, texts)
+                        predictions = model.predict(prepared_texts)
 
-            # Preprocess the texts and prepare them for classification
-            prepared_texts = prepare_texts(texts)
+                        # Mixin the results
+                        for p, v in zip(predictions, values):
+                            p = float(p[0])
+                            v['sentiment'] = {
+                                'label': probability_to_string(p),
+                                'probability': p
+                            }
 
-            # Classify the input texts and then initialize the list
-            # of predictions to return to the client
-            results = model.predict(prepared_texts)
-            data["predictions"] = []
+                # Remove language grouping
+                data['predictions'] = list(itertools.chain.from_iterable(by_lang.values()))
+                data["success"] = True
+                return flask.jsonify(data)
 
-            # Loop over the results and add them to the list of
-            # returned predictions
-            for i in range(len(results)):
-                p = float(results[i][0])
-                r = { 'sentiment': probability_to_string(p), 'text': texts[i], 'prediction': p }
-                data['predictions'].append(r)
+            else:
+                lang = next (iter (lang_registry.keys()))
+                model = lang_registry[lang]['model']
+                tokenizer = lang_registry[lang]['tokenizer']
+                
+                prepared_texts = prepare_texts(tokenizer, texts)
+                predictions = model.predict(prepared_texts)
+                data["predictions"] = []
 
-            # Indicate that the request was a success
-            data["success"] = True
+                for p, t in zip(predictions, texts):
+                    p = float(p[0])
+                    pred =  {
+                                'lang': lang,
+                                'sentiment': {
+                                    'label': probability_to_string(p),
+                                    'probability': p
+                                },
+                                'text': t
+                            }
 
-    # Return the data dictionary as a JSON response
-    return flask.jsonify(data)
+                    data['predictions'].append(pred)
+
+                data['success'] = True
+                return flask.jsonify(data);
 
 def main(argv):
     host = None
     port = None
-    model_id = 'de_1.0.0'
+    model_ids = 'de_1.0.0'
+    detect_lang_url = None
 
     try:
-        opts, args = getopt.getopt(argv, 'hp:', ['model=', 'host=', 'port='])
+        opts, args = getopt.getopt(argv, 'hp:', ['models=', 'host=', 'port=', 'detect_lang_url='])
         for opt, arg in opts:
             if opt == '-h':
-                print('Usage: sa-rest.py --model=<model> --host=<host> --port=<port>')
+                print('Usage: sa-rest.py --models=<models> --host=<host> --port=<port> --detect_lang=<url>')
                 sys.exit()
-            elif opt in ('-m', '--model'):
-                model_id = arg
+            elif opt in ('-m', '--models'):
+                model_ids = arg
             elif opt in ('--host'):
                 host = arg
             elif opt in ('-p', '--port'):
                 port = int(arg)
+            elif opt in ('-dlu', '--detect_lang_url'):
+                detect_lang_url = arg
         
-        load_model_and_tokenizer(model_id)
+        register(model_ids, detect_lang_url)
         print('Staring server...')
         app.run(host, port)
 
     except getopt.GetoptError:
-        print('Usage: sa-rest.py --model=<model> --host=<host> --port=<port>')
+        print('Usage: sa-rest.py --models=<models> --host=<host> --port=<port> --detect_lang=<url>')
         sys.exit(2)
     
 

@@ -4,7 +4,7 @@ Sentiment analysis of german texts. The machine learning model predicts whether 
 
 The machine learning model was implemented with [Keras](https://keras.io) and trained with about 30'000 German film reviews. The measured accuracy of the predictions is 81.82%. The model consists of an embedding layer as input, a hidden layer with 400 LSTM units and an output layer with 1 unit. The maximum length of an input text is 400 words. For the word embedding the [pre-trained word vectors](https://github.com/facebookresearch/fastText/blob/master/pretrained-vectors.md) of *FacebookResearch* were used.
 
-Several texts can be posted to the REST service at once for analysis (see the examples below).
+Several texts can be posted to the REST service at once for analysis. You can start the sentiment analysis service to access a *language detection service*. The service then first determines the language of the texts and then passes them on to the corresponding sentiment analysis model  (see the examples below).
 
 ## Scope of Application
 
@@ -20,7 +20,7 @@ pip3 install -r ./requirements.txt
 
 ## Starting the REST Service
 
-To start the REST server in a terminal:
+To start the REST service in a terminal:
 
 ```bash
 sa-rest.py -h
@@ -44,7 +44,7 @@ Queries use the following JSON format:
 ```json
 {
     "texts": [
-        "Dieser Film ist vom Anfang bis am Ende spannend! Die Schauspieler sind super!",
+        "Dieser Film ist vom Anfang bis am Ende spannend! Die Schauspieler sind wirklich gut!",
         "Dieser Film ist vom Anfang bis am Ende langweilig! Die Schauspieler sind mässig bis schlecht!"
     ]
 }
@@ -55,7 +55,7 @@ Queries use the following JSON format:
 Example of a curl call in a terminal:
 
 ```bash
-curl -H "Content-Type: application/json" -X POST -d '{"texts": ["Dieser Film ist vom Anfang bis am Ende spannend! Die Schauspieler sind super!","Dieser Film ist vom Anfang bis am Ende langweilig! Die Schauspieler sind mässig bis schlecht!"]}' http://127.0.0.1:5000/predict
+curl -H "Content-Type: application/json" -X POST -d '{"texts": ["Dieser Film ist vom Anfang bis am Ende spannend! Die Schauspieler sind wirklich gut!","Dieser Film ist vom Anfang bis am Ende langweilig! Die Schauspieler sind mässig bis schlecht!"]}' http://127.0.0.1:5000/predict
 ```
 
 The answer will look something like this:
@@ -63,19 +63,124 @@ The answer will look something like this:
 ```json
 {
     "predictions": [
-    {
-        "prediction": 0.988837718963623,
-        "sentiment": "positiv",
-        "text": "Dieser Film ist vom Anfang bis am Ende spannend! Die Schauspieler sind super!"
-    },
-    {
-        "prediction": 0.005242485553026199,
-        "sentiment": "negativ",
-        "text": "Dieser Film ist vom Anfang bis am Ende langweilig! Die Schauspieler sind mässig bis schlecht!"
-    }
-  ],
-  "success": true
+        {
+            "lang": "de",
+            "sentiment": {
+                "label": "positiv",
+                "probability": 0.9192836880683899
+            },
+            "text": "Dieser Film ist vom Anfang bis am Ende spannend! Die Schauspieler sind wirklich gut!"
+        },
+        {
+            "lang": "de",
+            "sentiment": {
+                "label": "negativ",
+                "probability": 0.020672615617513657
+            },
+            "text": "Dieser Film ist vom Anfang bis am Ende langweilig! Die Schauspieler sind mässig bis schlecht!"
+        }
+    ],
+    "success": true
 }
 ```
 
 A probability towards 0 means *negative*, one towards 1 means *positive* sentiment.
+
+## Starting the REST Service with language detection
+
+You can start the sentiment analysis service to access a *language detection service*. The service then first determines the language of the texts and then passes them on to the corresponding sentiment analysis model.
+
+To start the REST service with language detection in a terminal:
+
+```bash
+sa-rest.py -h
+Usage: sa-rest.py --model=<model> --host=<host> --port=<port> --lang_detect_url=<url>
+```
+
+model: comma-separated list of the ids composed of the language and the version (examples: de_1.0.0,en_1.0.0) of the models to load.
+
+lang_detect_url: url of the language detection service (example: http://127.0.0.1:5001/predict).
+
+
+### Example
+
+First, start a language detection service:
+
+```bash
+python3 ./src/ld-rest.py --host=127.0.0.1 --port=5001
+```
+
+Then start the sentiment analysis service with a reference to the language detection service:
+
+```bash
+python3 ./src/sa-rest.py --model=de_1.0.0,en_1.0.0 --host=127.0.0.1 --port=5000 --lang_detect_url=http://127.0.0.1:5001/predict
+```
+
+### Example Call with Curl
+
+Example of a curl call in a terminal (note the third text in English):
+
+```bash
+curl -H "Content-Type: application/json" -X POST -d '{"texts": ["Dieser Film ist vom Anfang bis am Ende spannend! Die Schauspieler sind super!","Dieser Film ist vom Anfang bis am Ende langweilig! Die Schauspieler sind mässig bis schlecht!","I found this movie really hard to sit through, my attention kept wandering off the tv."]}' http://127.0.0.1:5000/predict
+```
+
+The answer will look like this:
+
+```json
+{
+    "predictions": [
+        {
+            "lang": {
+                "label": "de",
+                "probability": {
+                    "de": 0.3903387784957886,
+                    "en": 0.1507692039012909,
+                    "fr": 0.15062315762043,
+                    "it": 0.15768270194530487,
+                    "rm": 0.15058617293834686
+                }
+            },
+            "sentiment": {
+                "label": "positiv",
+                "probability": 0.9192836880683899
+            },
+            "text": "Dieser Film ist vom Anfang bis am Ende spannend! Die Schauspieler sind wirklich gut!"
+        },
+        {
+            "lang": {
+                "label": "de", 
+                "probability": {
+                    "de": 0.32119157910346985, 
+                    "en": 0.15798360109329224, 
+                    "fr": 0.1574965864419937, 
+                    "it": 0.20636257529258728, 
+                    "rm": 0.1569656878709793
+                }
+        },
+            "sentiment": {
+                "label": "negativ",
+                "probability": 0.020672615617513657
+            },
+            "text": "Dieser Film ist vom Anfang bis am Ende langweilig! Die Schauspieler sind mässig bis schlecht!"
+        },
+        {
+            "lang": {
+                "label": "en",
+                "probability": {
+                    "de": 0.16670478880405426,
+                    "en": 0.3509998023509979,
+                    "fr": 0.15506018698215485,
+                    "it": 0.16949716210365295,
+                    "rm": 0.15773805975914001
+                }
+            }, 
+            "sentiment": {
+                "label": "negativ",
+                "probability": 0.454795777797699
+            }, 
+            "text": "I found this movie really hard to sit through, my attention kept wandering off the tv."
+        }
+    ],
+    "success": true
+}
+```
