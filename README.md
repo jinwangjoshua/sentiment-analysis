@@ -86,9 +86,9 @@ The answer will look something like this:
 
 A probability towards 0 means *negative*, one towards 1 means *positive* sentiment.
 
-## Starting the REST Service with language detection
+## Starting the REST Service with Language Detection
 
-You can start the sentiment analysis service to access a *language detection service*. The service then first determines the language of the texts and then passes them on to the corresponding sentiment analysis model.
+You can start the *sentiment analysis service* to access a *language detection service*. The service then first determines the language of the texts and then passes them on to the corresponding sentiment analysis model.
 
 To start the REST service with language detection in a terminal:
 
@@ -97,7 +97,7 @@ sa-rest.py -h
 Usage: sa-rest.py --model=<model> --host=<host> --port=<port> --lang_detect_url=<url>
 ```
 
-model: comma-separated list of the ids composed of the language and the version (examples: de_1.0.0,en_1.0.0) of the models to load.
+model: comma-separated list of the ids composed of the language and the version (examples: de_1.0.0, en_1.0.0) of the models to load.
 
 lang_detect_url: url of the language detection service (example: http://127.0.0.1:5001/predict).
 
@@ -121,7 +121,7 @@ python3 ./src/sa-rest.py --model=de_1.0.0,en_1.0.0 --host=127.0.0.1 --port=5000 
 Example of a curl call in a terminal (note the third text in English):
 
 ```bash
-curl -H "Content-Type: application/json" -X POST -d '{"texts": ["Dieser Film ist vom Anfang bis am Ende spannend! Die Schauspieler sind super!","Dieser Film ist vom Anfang bis am Ende langweilig! Die Schauspieler sind mässig bis schlecht!","I found this movie really hard to sit through, my attention kept wandering off the tv."]}' http://127.0.0.1:5000/predict
+curl -H "Content-Type: application/json" -X POST -d '{"texts": ["Dieser Film ist vom Anfang bis am Ende spannend! Die Schauspieler sind wirklich gut!","Dieser Film ist vom Anfang bis am Ende langweilig! Die Schauspieler sind mässig bis schlecht!","I found this movie really hard to sit through, my attention kept wandering off the tv."]}' http://127.0.0.1:5000/predict
 ```
 
 The answer will look like this:
