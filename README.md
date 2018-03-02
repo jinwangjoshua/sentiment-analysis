@@ -1,14 +1,14 @@
 # Sentiment Analysis
 
-Sentiment analysis of german texts. The machine learning model predicts whether the sentiment of a text is positive or negative.
+Sentiment analysis of english, german and french texts. The machine learning model predicts whether the sentiment of a text is positive or negative.
 
-The machine learning model was implemented with [Keras](https://keras.io) and trained with about 30'000 German film reviews. The measured accuracy of the predictions is 81.82%. The model consists of an embedding layer as input, a hidden layer with 400 LSTM units and an output layer with 1 unit. The maximum length of an input text is 400 words. For the word embedding the [pre-trained word vectors](https://github.com/facebookresearch/fastText/blob/master/pretrained-vectors.md) of *FacebookResearch* were used.
+The machine learning model was implemented with [Keras](https://keras.io) and trained with 50'000 english, 50'000 french and  30'000 german film reviews. The measured accuracy of the predictions is 81.82% for german and 84.1% for english and french. The model consists of an embedding layer as input, a hidden layer with 400 LSTM units and an output layer with 1 unit. The maximum length of an input text is 400 words. For the word embedding the [pre-trained word vectors](https://github.com/facebookresearch/fastText/blob/master/pretrained-vectors.md) of *FacebookResearch* were used.
 
 Several texts can be posted to the REST service at once for analysis. You can start the sentiment analysis service to access a *language detection service*. The service then first determines the language of the texts and then passes them on to the corresponding sentiment analysis model  (see the examples below).
 
 ## Scope of Application
 
-The model was trained with film reviews in German language. We also tested the model at random with German product reviews and reader comments. The results were generally promising (but need further investigation).
+The model was trained with film reviews in english, german and french language. We also tested the model at random with product reviews and reader comments in those languages. The results were generally promising (but need further investigation).
 
 ## Installation
 
@@ -27,14 +27,20 @@ sa-rest.py -h
 Usage: sa-rest.py --model=<model> --host=<host> --port=<port>
 ```
 
-model: id composed of the language and the version (examples: de_1.0.0, en_1.0.0) of the model to load.
+model: id composed of the language and the version (examples: en_1.0.0, de_1.0.0, fr_1.0.0) of the model to load.
 
 _Note_: The first time you start the service, the model (including the trained weights) and the tokenizer are loaded from ipublia's website (using https). They are stored in the directory ~/.ipublia/data/sentiment-analysis.
 
-### Example
+### Examples
 
 ```bash
 python3 ./src/sa-rest.py --model=de_1.0.0 --host=127.0.0.1 --port=5000
+```
+
+For French:
+
+```bash
+python3 ./src/sa-rest.py --model=fr_1.0.0 --host=127.0.0.1 --port=5000
 ```
 
 ## Querying the REST Service
@@ -94,12 +100,12 @@ To start the REST service with language detection in a terminal:
 
 ```bash
 sa-rest.py -h
-Usage: sa-rest.py --model=<model> --host=<host> --port=<port> --lang_detect_url=<url>
+Usage: sa-rest.py --model=<model> --host=<host> --port=<port> --detect_lang=<url>
 ```
 
-model: comma-separated list of the ids composed of the language and the version (examples: de_1.0.0, en_1.0.0) of the models to load.
+model: comma-separated list of the ids composed of the language and the version (examples: en_1.0.0, de_1.0.0, fr_1.0.0) of the models to load.
 
-lang_detect_url: url of the language detection service (example: http://127.0.0.1:5001/predict).
+detect_lang: url of the language detection service (example: http://127.0.0.1:5001/predict).
 
 
 ### Example
@@ -113,7 +119,7 @@ python3 ./src/ld-rest.py --host=127.0.0.1 --port=5001
 Then start the sentiment analysis service with a reference to the language detection service:
 
 ```bash
-python3 ./src/sa-rest.py --model=de_1.0.0,en_1.0.0 --host=127.0.0.1 --port=5000 --lang_detect_url=http://127.0.0.1:5001/predict
+python3 ./src/sa-rest.py --model=en_1.0.0,de_1.0.0,fr_1.0.0 --host=127.0.0.1 --port=5000 --detect_lang=http://127.0.0.1:5001/predict
 ```
 
 ### Example Call with Curl
@@ -121,66 +127,83 @@ python3 ./src/sa-rest.py --model=de_1.0.0,en_1.0.0 --host=127.0.0.1 --port=5000 
 Example of a curl call in a terminal (note the third text in English):
 
 ```bash
-curl -H "Content-Type: application/json" -X POST -d '{"texts": ["Dieser Film ist vom Anfang bis am Ende spannend! Die Schauspieler sind wirklich gut!","Dieser Film ist vom Anfang bis am Ende langweilig! Die Schauspieler sind mässig bis schlecht!","I found this movie really hard to sit through, my attention kept wandering off the tv."]}' http://127.0.0.1:5000/predict
+curl -H "Content-Type: application/json" -X POST -d '{"texts": ["I found this movie really hard to sit through, my attention kept wandering off the tv.","Dieser Film ist vom Anfang bis am Ende spannend! Die Schauspieler sind wirklich gut!","Dieser Film ist vom Anfang bis am Ende langweilig! Die Schauspieler sind mässig bis schlecht!","J\u0027aime ce film. Les acteurs jouent vraiment bien!"]}' http://127.0.0.1:5000/predict
 ```
 
 The answer will look like this:
 
 ```json
 {
-    "predictions": [
-        {
-            "lang": {
-                "label": "de",
-                "probability": {
-                    "de": 0.3903387784957886,
-                    "en": 0.1507692039012909,
-                    "fr": 0.15062315762043,
-                    "it": 0.15768270194530487,
-                    "rm": 0.15058617293834686
-                }
-            },
-            "sentiment": {
-                "label": "positiv",
-                "probability": 0.9192836880683899
-            },
-            "text": "Dieser Film ist vom Anfang bis am Ende spannend! Die Schauspieler sind wirklich gut!"
-        },
-        {
-            "lang": {
-                "label": "de", 
-                "probability": {
-                    "de": 0.32119157910346985, 
-                    "en": 0.15798360109329224, 
-                    "fr": 0.1574965864419937, 
-                    "it": 0.20636257529258728, 
-                    "rm": 0.1569656878709793
-                }
-        },
-            "sentiment": {
-                "label": "negativ",
-                "probability": 0.020672615617513657
-            },
-            "text": "Dieser Film ist vom Anfang bis am Ende langweilig! Die Schauspieler sind mässig bis schlecht!"
-        },
-        {
-            "lang": {
-                "label": "en",
-                "probability": {
-                    "de": 0.16670478880405426,
-                    "en": 0.3509998023509979,
-                    "fr": 0.15506018698215485,
-                    "it": 0.16949716210365295,
-                    "rm": 0.15773805975914001
-                }
-            }, 
-            "sentiment": {
-                "label": "negativ",
-                "probability": 0.454795777797699
-            }, 
-            "text": "I found this movie really hard to sit through, my attention kept wandering off the tv."
+  "predictions": [
+    {
+      "lang": {
+        "label": "en", 
+        "probability": {
+          "de": 0.16670478880405426, 
+          "en": 0.3509998023509979, 
+          "fr": 0.15506018698215485, 
+          "it": 0.16949716210365295, 
+          "rm": 0.15773805975914001
         }
-    ],
-    "success": true
+      }, 
+      "sentiment": {
+        "label": "negativ", 
+        "probability": 0.454795777797699
+      }, 
+      "text": "I found this movie really hard to sit through, my attention kept wandering off the tv."
+    }, 
+    {
+      "lang": {
+        "label": "de", 
+        "probability": {
+          "de": 0.3903387784957886, 
+          "en": 0.1507692039012909, 
+          "fr": 0.15062315762043, 
+          "it": 0.15768270194530487, 
+          "rm": 0.15058617293834686
+        }
+      }, 
+      "sentiment": {
+        "label": "positiv", 
+        "probability": 0.9192836880683899
+      }, 
+      "text": "Dieser Film ist vom Anfang bis am Ende spannend! Die Schauspieler sind wirklich gut!"
+    }, 
+    {
+      "lang": {
+        "label": "de", 
+        "probability": {
+          "de": 0.32119157910346985, 
+          "en": 0.15798360109329224, 
+          "fr": 0.1574965864419937, 
+          "it": 0.20636257529258728, 
+          "rm": 0.1569656878709793
+        }
+      }, 
+      "sentiment": {
+        "label": "negativ", 
+        "probability": 0.020672615617513657
+      }, 
+      "text": "Dieser Film ist vom Anfang bis am Ende langweilig! Die Schauspieler sind mässig bis schlecht!"
+    }, 
+    {
+      "lang": {
+        "label": "fr", 
+        "probability": {
+          "de": 0.15025940537452698, 
+          "en": 0.15019096434116364, 
+          "fr": 0.3937331736087799, 
+          "it": 0.15477478504180908, 
+          "rm": 0.1510416865348816
+        }
+      }, 
+      "sentiment": {
+        "label": "positiv", 
+        "probability": 0.6140143871307373
+      }, 
+      "text": "J'aime ce film. Les acteurs jouent vraiment bien!"
+    }
+  ], 
+  "success": true
 }
 ```

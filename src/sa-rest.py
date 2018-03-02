@@ -155,11 +155,11 @@ def predict():
 def main(argv):
     host = None
     port = None
-    model_ids = 'de_1.0.0'
-    detect_lang_url = None
+    model_ids = 'en_1.0.0'
+    detect_lang = None
 
     try:
-        opts, args = getopt.getopt(argv, 'hp:', ['models=', 'host=', 'port=', 'detect_lang_url='])
+        opts, args = getopt.getopt(argv, 'hp:', ['models=', 'host=', 'port=', 'detect_lang='])
         for opt, arg in opts:
             if opt == '-h':
                 print('Usage: sa-rest.py --models=<models> --host=<host> --port=<port> --detect_lang=<url>')
@@ -170,10 +170,10 @@ def main(argv):
                 host = arg
             elif opt in ('-p', '--port'):
                 port = int(arg)
-            elif opt in ('-dlu', '--detect_lang_url'):
-                detect_lang_url = arg
+            elif opt in ('-dlu', '--detect_lang'):
+                detect_lang = arg
         
-        register(model_ids, detect_lang_url)
+        register(model_ids, detect_lang)
         print('Staring server...')
         app.run(host, port)
 
