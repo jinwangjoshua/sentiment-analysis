@@ -109,7 +109,7 @@ A probability towards 0 means *negative*, one towards 1 means *positive* sentime
 
 ## Starting the REST Service with Language Detection
 
-You can start the *sentiment analysis service* to access a [language detection] service(https://github.com/ipublia/language-detection). The service then first determines the language of the texts and then passes them on to the corresponding sentiment analysis model.
+You can start the *sentiment analysis service* to access a [language detection](https://github.com/ipublia/language-detection) service. The service then first determines the language of the texts and then passes them on to the corresponding sentiment analysis model.
 
 To start the REST service with language detection in a terminal:
 
