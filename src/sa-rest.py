@@ -155,22 +155,22 @@ def predict():
 def main(argv):
     host = None
     port = None
-    model_ids = 'en_1.0.0'
+    model_ids = 'en_1.0.1,de_1.0.1,fr_1.0.1,it_1.0.1'
     detect_lang = None
 
     try:
-        opts, args = getopt.getopt(argv, 'hp:', ['models=', 'host=', 'port=', 'detect_lang='])
+        opts, args = getopt.getopt(argv, 'hp:', ['model=', 'host=', 'port=', 'detect_lang='])
         for opt, arg in opts:
             if opt == '-h':
-                print('Usage: sa-rest.py --models=<models> --host=<host> --port=<port> --detect_lang=<url>')
+                print('Usage: sa-rest.py --model=<model> --host=<host> --port=<port> --detect_lang=<url>')
                 sys.exit()
-            elif opt in ('-m', '--models'):
+            elif opt in ('-m', '--model'):
                 model_ids = arg
             elif opt in ('--host'):
                 host = arg
             elif opt in ('-p', '--port'):
                 port = int(arg)
-            elif opt in ('-dlu', '--detect_lang'):
+            elif opt in ('-dl', '--detect_lang'):
                 detect_lang = arg
         
         register(model_ids, detect_lang)
@@ -178,7 +178,7 @@ def main(argv):
         app.run(host, port)
 
     except getopt.GetoptError:
-        print('Usage: sa-rest.py --models=<models> --host=<host> --port=<port> --detect_lang=<url>')
+        print('Usage: sa-rest.py --model=<model> --host=<host> --port=<port> --detect_lang=<url>')
         sys.exit(2)
     
 

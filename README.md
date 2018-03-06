@@ -1,14 +1,20 @@
 # Sentiment Analysis
 
-Sentiment analysis of english, german and french texts. The machine learning model predicts whether the sentiment of a text is positive or negative.
+Multilingual sentiment analysis for English, German, French and Italian. The machine learning model predicts whether the sentiment of a text is positive or negative.
 
-The machine learning model was implemented with [Keras](https://keras.io) and trained with 50'000 english, 50'000 french and  30'000 german film reviews. The measured accuracy of the predictions is 81.82% for german and 84.1% for english and french. The model consists of an embedding layer as input, a hidden layer with 400 LSTM units and an output layer with 1 unit. The maximum length of an input text is 400 words. For the word embedding the [pre-trained word vectors](https://github.com/facebookresearch/fastText/blob/master/pretrained-vectors.md) of *FacebookResearch* were used.
+The machine learning model was implemented with [Keras](https://keras.io) and trained with 50'000 english, 30'000 german, 50'000 french and 30'000 italian film reviews. The models are tested with [TensorFlow](https://www.tensorflow.org/) as backend.
 
-Several texts can be posted to the REST service at once for analysis. You can start the sentiment analysis service to access a *language detection service*. The service then first determines the language of the texts and then passes them on to the corresponding sentiment analysis model  (see the examples below).
+## Accuracy of the Predictions
+
+The measured accuracy of the predictions is 88.6% for English, 81.3% for German, 84.4% for French and 81.6% for Italian.
+
+The model consists of an embedding layer as input, a hidden layer with 8 LSTM units and an output layer with 1 unit. The maximum length of an input text is 400 words. For the word embedding the [pre-trained word vectors](https://github.com/facebookresearch/fastText/blob/master/pretrained-vectors.md) of *FacebookResearch* were used.
 
 ## Scope of Application
 
-The model was trained with film reviews in english, german and french language. We also tested the model at random with product reviews and reader comments in those languages. The results were generally promising (but need further investigation).
+The model was trained with film reviews in English, German, French and Italian. We also tested the model at random with product reviews and reader comments in those languages. The results were generally good. However, we recommend testing when using the models in new domains.
+
+Several texts can be posted to the REST service at once for analysis. You can start the sentiment analysis service to access a [language detection](https://github.com/ipublia/language-detection) service. The service then first determines the language of the texts and then passes them on to the corresponding sentiment analysis model (see the examples below).
 
 ## Installation
 
@@ -27,20 +33,28 @@ sa-rest.py -h
 Usage: sa-rest.py --model=<model> --host=<host> --port=<port>
 ```
 
-model: id composed of the language and the version (examples: en_1.0.0, de_1.0.0, fr_1.0.0) of the model to load.
+model: id composed of the language and the version (examples: en_1.0.1, de_1.0.1, fr_1.0.1, it_1.0.1) of the model to load. Per default the newest versions of all models are loaded.
 
 _Note_: The first time you start the service, the model (including the trained weights) and the tokenizer are loaded from ipublia's website (using https). They are stored in the directory ~/.ipublia/data/sentiment-analysis.
 
 ### Examples
 
+Loads all language models in the newest version:
+
 ```bash
-python3 ./src/sa-rest.py --model=de_1.0.0 --host=127.0.0.1 --port=5000
+python3 ./src/sa-rest.py --host=127.0.0.1 --port=5000
 ```
 
 For French:
 
 ```bash
-python3 ./src/sa-rest.py --model=fr_1.0.0 --host=127.0.0.1 --port=5000
+python3 ./src/sa-rest.py --model=fr_1.0.1 --host=127.0.0.1 --port=5000
+```
+
+For German:
+
+```bash
+python3 ./src/sa-rest.py --model=en_1.0.1 --host=127.0.0.1 --port=5000
 ```
 
 ## Querying the REST Service
@@ -49,10 +63,10 @@ Queries use the following JSON format:
 
 ```json
 {
-    "texts": [
-        "Dieser Film ist vom Anfang bis am Ende spannend! Die Schauspieler sind wirklich gut!",
-        "Dieser Film ist vom Anfang bis am Ende langweilig! Die Schauspieler sind mässig bis schlecht!"
-    ]
+  "texts": [
+    "This film is exciting from the beginning to the end! The actors are really good!",
+    "This movie is boring from the beginning to the end! The actors are moderate to bad!"
+  ]
 }
 ```
 
@@ -61,40 +75,41 @@ Queries use the following JSON format:
 Example of a curl call in a terminal:
 
 ```bash
-curl -H "Content-Type: application/json" -X POST -d '{"texts": ["Dieser Film ist vom Anfang bis am Ende spannend! Die Schauspieler sind wirklich gut!","Dieser Film ist vom Anfang bis am Ende langweilig! Die Schauspieler sind mässig bis schlecht!"]}' http://127.0.0.1:5000/predict
+curl -H "Content-Type: application/json" -X POST -d '{"texts": ["This film is exciting from the beginning to the end! The actors are really good!","This movie is boring from the beginning to the end! The actors are moderate to bad!"]}' http://127.0.0.1:5000/predict
 ```
 
 The answer will look something like this:
 
 ```json
 {
-    "predictions": [
-        {
-            "lang": "de",
-            "sentiment": {
-                "label": "positiv",
-                "probability": 0.9192836880683899
-            },
-            "text": "Dieser Film ist vom Anfang bis am Ende spannend! Die Schauspieler sind wirklich gut!"
-        },
-        {
-            "lang": "de",
-            "sentiment": {
-                "label": "negativ",
-                "probability": 0.020672615617513657
-            },
-            "text": "Dieser Film ist vom Anfang bis am Ende langweilig! Die Schauspieler sind mässig bis schlecht!"
-        }
-    ],
-    "success": true
+  "predictions": [
+    {
+      "lang": "en", 
+      "sentiment": {
+        "label": "positiv", 
+        "probability": 0.9012099504470825
+      }, 
+      "text": "This film is exciting from the beginning to the end! The actors are really good!"
+    }, 
+    {
+      "lang": "en", 
+      "sentiment": {
+        "label": "negativ", 
+        "probability": 0.01829037070274353
+      }, 
+      "text": "This movie is boring from the beginning to the end! The actors are moderate to bad!"
+    }
+  ], 
+  "success": true
 }
+
 ```
 
 A probability towards 0 means *negative*, one towards 1 means *positive* sentiment.
 
 ## Starting the REST Service with Language Detection
 
-You can start the *sentiment analysis service* to access a *language detection service*. The service then first determines the language of the texts and then passes them on to the corresponding sentiment analysis model.
+You can start the *sentiment analysis service* to access a [language detection] service(https://github.com/ipublia/language-detection). The service then first determines the language of the texts and then passes them on to the corresponding sentiment analysis model.
 
 To start the REST service with language detection in a terminal:
 
@@ -103,10 +118,9 @@ sa-rest.py -h
 Usage: sa-rest.py --model=<model> --host=<host> --port=<port> --detect_lang=<url>
 ```
 
-model: comma-separated list of the ids composed of the language and the version (examples: en_1.0.0, de_1.0.0, fr_1.0.0) of the models to load.
+model: id composed of the language and the version (examples: en_1.0.1, de_1.0.1, fr_1.0.1, it_1.0.1) of the model to load. Per default the newest versions of all models are loaded.
 
 detect_lang: url of the language detection service (example: http://127.0.0.1:5001/predict).
-
 
 ### Example
 
@@ -119,7 +133,7 @@ python3 ./src/ld-rest.py --host=127.0.0.1 --port=5001
 Then start the sentiment analysis service with a reference to the language detection service:
 
 ```bash
-python3 ./src/sa-rest.py --model=en_1.0.0,de_1.0.0,fr_1.0.0 --host=127.0.0.1 --port=5000 --detect_lang=http://127.0.0.1:5001/predict
+python3 ./src/sa-rest.py --host=127.0.0.1 --port=5000 --detect_lang=http://127.0.0.1:5001/predict
 ```
 
 ### Example Call with Curl
@@ -127,7 +141,7 @@ python3 ./src/sa-rest.py --model=en_1.0.0,de_1.0.0,fr_1.0.0 --host=127.0.0.1 --p
 Example of a curl call in a terminal (note the third text in English):
 
 ```bash
-curl -H "Content-Type: application/json" -X POST -d '{"texts": ["I found this movie really hard to sit through, my attention kept wandering off the tv.","Dieser Film ist vom Anfang bis am Ende spannend! Die Schauspieler sind wirklich gut!","Dieser Film ist vom Anfang bis am Ende langweilig! Die Schauspieler sind mässig bis schlecht!","J\u0027aime ce film. Les acteurs jouent vraiment bien!"]}' http://127.0.0.1:5000/predict
+curl -H "Content-Type: application/json" -X POST -d '{"texts": ["I found this movie really hard to sit through, my attention kept wandering off the tv.","Dieser Film ist vom Anfang bis am Ende spannend! Die Schauspieler sind wirklich gut!","Dieser Film ist vom Anfang bis am Ende langweilig! Die Schauspieler sind mässig bis schlecht!","J\u0027aime ce film. Les acteurs jouent vraiment bien!","Non mi piace affatto questo film. Gli attori sono cattivi e la storia è noiosa!"]}' http://127.0.0.1:5000/predict
 ```
 
 The answer will look like this:
@@ -139,16 +153,16 @@ The answer will look like this:
       "lang": {
         "label": "en", 
         "probability": {
-          "de": 0.16670478880405426, 
-          "en": 0.3509998023509979, 
-          "fr": 0.15506018698215485, 
-          "it": 0.16949716210365295, 
-          "rm": 0.15773805975914001
+          "de": 0.15291942656040192, 
+          "en": 0.386442095041275, 
+          "fr": 0.1524139940738678, 
+          "it": 0.15353836119174957, 
+          "rm": 0.1546860933303833
         }
       }, 
       "sentiment": {
         "label": "negativ", 
-        "probability": 0.454795777797699
+        "probability": 0.44230401515960693
       }, 
       "text": "I found this movie really hard to sit through, my attention kept wandering off the tv."
     }, 
@@ -156,16 +170,16 @@ The answer will look like this:
       "lang": {
         "label": "de", 
         "probability": {
-          "de": 0.3903387784957886, 
-          "en": 0.1507692039012909, 
-          "fr": 0.15062315762043, 
-          "it": 0.15768270194530487, 
-          "rm": 0.15058617293834686
+          "de": 0.4036977291107178, 
+          "en": 0.1490136682987213, 
+          "fr": 0.1489626169204712, 
+          "it": 0.14897985756397247, 
+          "rm": 0.14934605360031128
         }
       }, 
       "sentiment": {
         "label": "positiv", 
-        "probability": 0.9192836880683899
+        "probability": 0.9132363200187683
       }, 
       "text": "Dieser Film ist vom Anfang bis am Ende spannend! Die Schauspieler sind wirklich gut!"
     }, 
@@ -173,16 +187,16 @@ The answer will look like this:
       "lang": {
         "label": "de", 
         "probability": {
-          "de": 0.32119157910346985, 
-          "en": 0.15798360109329224, 
-          "fr": 0.1574965864419937, 
-          "it": 0.20636257529258728, 
-          "rm": 0.1569656878709793
+          "de": 0.40277570486068726, 
+          "en": 0.1491391956806183, 
+          "fr": 0.14907844364643097, 
+          "it": 0.1491205096244812, 
+          "rm": 0.1498860865831375
         }
       }, 
       "sentiment": {
         "label": "negativ", 
-        "probability": 0.020672615617513657
+        "probability": 0.0641002506017685
       }, 
       "text": "Dieser Film ist vom Anfang bis am Ende langweilig! Die Schauspieler sind mässig bis schlecht!"
     }, 
@@ -190,18 +204,35 @@ The answer will look like this:
       "lang": {
         "label": "fr", 
         "probability": {
-          "de": 0.15025940537452698, 
-          "en": 0.15019096434116364, 
-          "fr": 0.3937331736087799, 
-          "it": 0.15477478504180908, 
-          "rm": 0.1510416865348816
+          "de": 0.14898933470249176, 
+          "en": 0.1492728441953659, 
+          "fr": 0.40348654985427856, 
+          "it": 0.14923687279224396, 
+          "rm": 0.14901447296142578
         }
       }, 
       "sentiment": {
         "label": "positiv", 
-        "probability": 0.6140143871307373
+        "probability": 0.6126847267150879
       }, 
       "text": "J'aime ce film. Les acteurs jouent vraiment bien!"
+    }, 
+    {
+      "lang": {
+        "label": "it", 
+        "probability": {
+          "de": 0.15224331617355347, 
+          "en": 0.15012496709823608, 
+          "fr": 0.15062405169010162, 
+          "it": 0.39602142572402954, 
+          "rm": 0.15098623931407928
+        }
+      }, 
+      "sentiment": {
+        "label": "negativ", 
+        "probability": 0.20823518931865692
+      }, 
+      "text": "Non mi piace affatto questo film. Gli attori sono cattivi e la storia è noiosa!"
     }
   ], 
   "success": true
